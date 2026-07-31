@@ -98,7 +98,7 @@ function toInvoiceDraft(
       state: transaction.merchant.state,
       preferredLanguage: transaction.merchant.preferredLanguage,
     },
-    amount: transaction.amount.toString(),
+    amount: transaction.amount.toFixed(2),
     customerRef: transaction.customerRef ?? undefined,
     source: transaction.source,
   };

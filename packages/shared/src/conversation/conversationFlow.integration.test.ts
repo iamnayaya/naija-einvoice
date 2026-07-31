@@ -137,7 +137,7 @@ describe('conversational invoice flow (integration)', () => {
     const transaction = await testPrisma.transaction.findUnique({
       where: { id: third.createdTransactionIds[0] },
     });
-    expect(transaction!.amount).toBe('5000.00');
+    expect(transaction!.amount.toFixed(2)).toBe('5000.00');
     expect(transaction!.source).toBe('whatsapp');
 
     const conversation = await testPrisma.conversationState.findUnique({
@@ -164,7 +164,7 @@ describe('conversational invoice flow (integration)', () => {
     const transaction = await testPrisma.transaction.findUnique({
       where: { id: third.createdTransactionIds[0] },
     });
-    expect(transaction!.amount).toBe('5000.00');
+    expect(transaction!.amount.toFixed(2)).toBe('5000.00');
   });
 
   itIf('English: multi-sale confirmation enqueues two transactions', async () => {
@@ -193,7 +193,7 @@ describe('conversational invoice flow (integration)', () => {
     const transaction = await testPrisma.transaction.findUnique({
       where: { id: confirmed.createdTransactionIds[0] },
     });
-    expect(transaction!.amount).toBe('6000.00');
+    expect(transaction!.amount.toFixed(2)).toBe('6000.00');
     expect(transaction!.customerRef).toBe('Amina');
   });
 });

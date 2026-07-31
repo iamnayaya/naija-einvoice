@@ -30,7 +30,7 @@ export async function notifyConversationReceipt(
     invoice: { invoiceNumber: invoice.invoiceNumber, irn: invoice.irn },
     merchant: { preferredLanguage: invoice.transaction.merchant.preferredLanguage },
     itemDescription: raw.itemDescription,
-    amount: invoice.transaction.amount.toString(),
+    amount: invoice.transaction.amount.toFixed(2),
   });
 
   await sender.sendImage(threadId, {
