@@ -27,11 +27,22 @@ export interface TurnDecision {
   replyKey: MessageKey;
   replyParams?: Record<string, string>;
   /** When set, the orchestrator must create Transactions + enqueue jobs. */
-  action?: 'enqueue';
+  action?: 'enqueue' | 'upgrade';
   salesToEnqueue?: PendingSale[];
 }
 
 export function decideTurn(input: TurnInput): TurnDecision {
+  // Plan-intent is handled in ANY state: a merchant can ask to upgrade mid-sale
+  // or right after confirming. The orchestrator resolves the payment link.
+  if (input.parsed.status === 'intent_upgrade') {
+    return {
+      nextState: input.state,
+      nextContext: input.context,
+      replyKey: 'upgrade_unavailable',
+      action: 'upgrade',
+    };
+  }
+
   switch (input.state) {
     case 'awaiting_details':
       return decideAwaitingDetails(input);
@@ -82,6 +93,11 @@ function decideAwaitingDetails(input: TurnInput): TurnDecision {
 
     case 'parsed':
       return summaryReply(language, salesFromParsed(parsed));
+
+    case 'intent_upgrade':
+      // Unreachable — decideTurn short-circuits upgrade intent. Kept for
+      // exhaustiveness of the ParseStatus union.
+      return { nextState: 'awaiting_details', nextContext: context, replyKey: 'upgrade_unavailable' };
   }
 }
 
@@ -121,6 +137,10 @@ function decideAwaitingConfirmation(input: TurnInput): TurnDecision {
     case 'clarify':
     case 'unparseable':
       // Don't lose the pending confirmation — restate it.
+      return summaryReply(language, context.pendingSales);
+
+    case 'intent_upgrade':
+      // Unreachable — decideTurn short-circuits upgrade intent.
       return summaryReply(language, context.pendingSales);
   }
 }

@@ -2,7 +2,7 @@ import { config as loadEnv } from 'dotenv';
 import { resolve } from 'node:path';
 import type { Job } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PrismaClient } from '@naija/shared';
+import { FREE_TIER_MONTHLY_INVOICE_LIMIT, PrismaClient } from '@naija/shared';
 import { MockNRSProvider } from '../providers/mockNrsProvider';
 import { generateInvoiceNumber, processInvoiceSubmission } from './invoiceSubmission';
 
@@ -165,6 +165,97 @@ describe('invoice pipeline (integration)', () => {
       prisma: testPrisma,
     });
     expect(second.status).toBe('validated');
+  });
+
+  itIf('free tier: blocks the submission at the monthly cap without calling the provider', async () => {
+    const merchant = await testPrisma.merchant.create({
+      data: {
+        businessName: 'INTEGRATION TEST',
+        phone: uniqueMerchantPhone(),
+        state: 'Lagos',
+        preferredLanguage: 'en',
+        subscriptionTier: 'free',
+      },
+    });
+
+    // Fill the month: FREE_TIER_MONTHLY_INVOICE_LIMIT invoices already issued.
+    for (let i = 0; i < FREE_TIER_MONTHLY_INVOICE_LIMIT; i += 1) {
+      const tx = await testPrisma.transaction.create({
+        data: { merchantId: merchant.id, amount: '100.00', source: 'whatsapp', rawPayload: { fill: true } },
+      });
+      await testPrisma.invoice.create({
+        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${i}`, status: 'validated' },
+      });
+    }
+
+    const nextTx = await testPrisma.transaction.create({
+      data: { merchantId: merchant.id, amount: '5000.00', source: 'whatsapp', rawPayload: { cap: true } },
+    });
+
+    let providerCalled = false;
+    const spyProvider = {
+      submit: async () => {
+        providerCalled = true;
+        return { ok: true, irn: 'NRS-SPY', csid: 'CSID', qrCodeUrl: 'https://mock-nrs.test/qr' };
+      },
+    };
+
+    const result = await processInvoiceSubmission(jobFor(nextTx.id), {
+      provider: spyProvider,
+      prisma: testPrisma,
+    });
+
+    expect(providerCalled).toBe(false);
+    expect(result.status).toBe('blocked_by_quota');
+    expect(result.quota).toMatchObject({
+      tier: 'free',
+      used: FREE_TIER_MONTHLY_INVOICE_LIMIT,
+      limit: FREE_TIER_MONTHLY_INVOICE_LIMIT,
+      allowed: false,
+    });
+
+    const invoice = await testPrisma.invoice.findUnique({ where: { transactionId: nextTx.id } });
+    expect(invoice!.status).toBe('blocked_by_quota');
+
+    await testPrisma.invoice.deleteMany({ where: { transaction: { merchantId: merchant.id } } });
+    await testPrisma.transaction.deleteMany({ where: { merchantId: merchant.id } });
+    await testPrisma.merchant.deleteMany({ where: { id: merchant.id } });
+  });
+
+  itIf('paid tier: a starter merchant has no monthly cap', async () => {
+    const merchant = await testPrisma.merchant.create({
+      data: {
+        businessName: 'INTEGRATION TEST',
+        phone: uniqueMerchantPhone(),
+        state: 'Lagos',
+        preferredLanguage: 'en',
+        subscriptionTier: 'starter',
+      },
+    });
+
+    // Past the free limit, a starter merchant still validates.
+    for (let i = 0; i < FREE_TIER_MONTHLY_INVOICE_LIMIT + 1; i += 1) {
+      const tx = await testPrisma.transaction.create({
+        data: { merchantId: merchant.id, amount: '100.00', source: 'whatsapp', rawPayload: { fill: true } },
+      });
+      await testPrisma.invoice.create({
+        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${i}`, status: 'validated' },
+      });
+    }
+
+    const nextTx = await testPrisma.transaction.create({
+      data: { merchantId: merchant.id, amount: '5000.00', source: 'whatsapp', rawPayload: { starter: true } },
+    });
+
+    const result = await processInvoiceSubmission(jobFor(nextTx.id), {
+      provider: providerOk,
+      prisma: testPrisma,
+    });
+    expect(result.status).toBe('validated');
+
+    await testPrisma.invoice.deleteMany({ where: { transaction: { merchantId: merchant.id } } });
+    await testPrisma.transaction.deleteMany({ where: { merchantId: merchant.id } });
+    await testPrisma.merchant.deleteMany({ where: { id: merchant.id } });
   });
 
   it('generateInvoiceNumber is stable and prefixed', () => {

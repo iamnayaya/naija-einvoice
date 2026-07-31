@@ -28,6 +28,7 @@ export type ParseStatus =
   | 'correction'
   | 'affirmation'
   | 'negation'
+  | 'intent_upgrade'
   | 'unparseable';
 
 export type ParseTier = 'tier1' | 'tier2';
@@ -43,6 +44,8 @@ export type ParseTier = 'tier1' | 'tier2';
  *                      `fields.amount` holds the corrected figure.
  * - `affirmation`   -> a "YES"-equivalent reply to a confirmation prompt.
  * - `negation`      -> a "NO"-equivalent reply.
+ * - `intent_upgrade`-> the merchant asked about upgrading their plan (Phase 2
+ *                      billing); the bot replies with a payment link.
  * - `unparseable`   -> nothing useful could be extracted.
  */
 export interface ParseResult {

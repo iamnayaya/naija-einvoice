@@ -20,4 +20,8 @@ export const pcm: MessageCatalog = {
   cancelled: 'Okay, I cancel am. Send di item and amount anytime you ready.',
   receipt_text: 'Receipt\n{item}\nAmount: \u20A6{amount}\nIRN: {irn}\nVerify: {url}',
   error: 'Sabi get wahala. Abeg try again.',
+  free_limit_reached:
+    'You don use all {limit} free invoice for dis month. Reply UPGRADE to continue invoicing without limit.',
+  upgrade_link: 'Good choice! Tap here to upgrade: {url}',
+  upgrade_unavailable: 'Upgrade no dey available now \u2014 abeg contact support.',
 };

@@ -1,6 +1,7 @@
 import { prisma, handleIncomingMessage, MockWhatsAppSender, AnthropicTier2 } from '@naija/shared';
 import { env } from '../config';
 import { enqueueInvoiceSubmission } from '../queue/invoice';
+import { createStarterPaymentLink } from './paystack.service';
 
 /**
  * API-side adapter for the conversational invoice engine.
@@ -46,6 +47,15 @@ export async function handleMerchantMessage(input: HandleMerchantMessageInput) {
           await enqueueInvoiceSubmission(transactionId, { threadId });
         }
       },
+      createUpgradeLink: async ({ merchantId }) =>
+        createStarterPaymentLink(
+          {
+            secretKey: env.PAYSTACK_SECRET_KEY,
+            starterPlanCode: env.PAYSTACK_STARTER_PLAN_CODE,
+            defaultEmail: env.PAYSTACK_DEFAULT_EMAIL,
+          },
+          { merchantId },
+        ),
     },
     {
       merchantId: merchant.id,

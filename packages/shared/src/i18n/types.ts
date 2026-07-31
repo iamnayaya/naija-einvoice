@@ -14,6 +14,10 @@ export const MESSAGE_KEYS = [
   'cancelled',
   'receipt_text',
   'error',
+  // Phase 2 billing
+  'free_limit_reached',
+  'upgrade_link',
+  'upgrade_unavailable',
 ] as const;
 
 export type MessageKey = (typeof MESSAGE_KEYS)[number];

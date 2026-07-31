@@ -20,4 +20,8 @@ export const ha: MessageCatalog = {
   cancelled: 'To, na soke shi. Aiko abu da kudi duk lokacin da kake shirye.',
   receipt_text: 'Rasit\n{item}\nKudi: \u20A6{amount}\nIRN: {irn}\nDuba: {url}',
   error: 'An sami matsala. Da fatan za ka sake gwadawa.',
+  free_limit_reached:
+    'Ka yi amfani da duk {limit} lissafin kyauta na wannan wata. Rubuta UPGRADE don ci gaba da lissafin ba tare da iyaka ba.',
+  upgrade_link: 'Zabi mai kyau! Danna nan don ha\u0257awa: {url}',
+  upgrade_unavailable: 'Ha\u0257awa ba ta nan yanzu \u2014 da fatan za ka tuntu\u0253i tallafi.',
 };

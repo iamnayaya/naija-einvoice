@@ -54,6 +54,40 @@ describe('affirmation/negation detector', () => {
   }
 });
 
+describe('upgrade intent detector', () => {
+  const upgradeCases = [
+    'upgrade',
+    'I want to upgrade',
+    'upgrade plan',
+    'buy plan',
+    'subscribe',
+    'starter plan',
+    'growth plan',
+    'premium',
+  ];
+
+  for (const text of upgradeCases) {
+    it(`"${text}" -> intent_upgrade`, async () => {
+      const result = await parseMessage(text);
+      expect(result.status).toBe('intent_upgrade');
+    });
+  }
+
+  it('an amount in the message keeps it a sale, not an upgrade', async () => {
+    const result = await parseMessage('sold upgrade phone 5k');
+    expect(result.status).toBe('parsed');
+    expect(result.fields.itemDescription).toBeTruthy();
+    expect(result.fields.amount).toBe('5000.00');
+  });
+
+  it('plain sale messages are not upgrade intent', async () => {
+    for (const text of ['sold shoes 5k', 'upgrade the system tomorrow']) {
+      const result = await parseMessage(text);
+      expect(result.status).not.toBe('intent_upgrade');
+    }
+  });
+});
+
 describe('Tier 2 fallback', () => {
   class FakeTier2 implements Tier2Llm {
     readonly name = 'fake';

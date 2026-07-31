@@ -112,3 +112,37 @@ describe('POST /webhooks/pos/:provider (signature-verified)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('POST /webhooks/paystack/subscriptions (billing, signature-verified)', () => {
+  const SECRET = 'sk_test_vitest_secret';
+
+  it('rejects a webhook with a bad signature (401)', async () => {
+    const res = await request(app)
+      .post('/webhooks/paystack/subscriptions')
+      .set('Content-Type', 'application/json')
+      .set('x-paystack-signature', 'tampered')
+      .send(JSON.stringify({ event: 'subscription.create', data: {} }));
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects an empty body (400)', async () => {
+    const res = await request(app)
+      .post('/webhooks/paystack/subscriptions')
+      .set('Content-Type', 'application/json')
+      .send('');
+    expect(res.status).toBe(400);
+  });
+
+  it('acknowledges (200) a validly-signed event the billing handler does not act on', async () => {
+    const body = { event: 'transfer.success', data: { reference: 'TRF_1' } };
+    const rawBody = JSON.stringify(body);
+    const signature = createHmac('sha512', SECRET).update(rawBody).digest('hex');
+    const res = await request(app)
+      .post('/webhooks/paystack/subscriptions')
+      .set('Content-Type', 'application/json')
+      .set('x-paystack-signature', signature)
+      .send(rawBody);
+    expect(res.status).toBe(200);
+    expect(res.body.outcome).toBe('ignored');
+  });
+});

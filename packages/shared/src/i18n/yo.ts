@@ -20,4 +20,8 @@ export const yo: MessageCatalog = {
   cancelled: 'Ó dára, mo fagilé. Fì ohun àti iye ránṣẹ́ nígbàkigbà tí o bá ṣetán.',
   receipt_text: 'Rìsítì\n{item}\nIye: \u20A6{amount}\nIRN: {irn}\nṢàyẹ̀wò: {url}',
   error: 'Nǹkan kan ṣẹlẹ̀. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kansí.',
+  free_limit_reached:
+    'O ti lo gbogbo àwéjẹ́ {limit} ọ̀fẹ́ fún oṣù yìí. Dá UPGRADE lóhùn láti máa tẹ̀síwájú láìlópin.',
+  upgrade_link: 'Àṣàyàn tó dára! Tẹ ibí láti ṣe upgrade: {url}',
+  upgrade_unavailable: 'Upgrade kò sí níbẹ̀ báyìí \u2014 jọ̀wọ́ kàn sí ìtìlẹ́yìn.',
 };

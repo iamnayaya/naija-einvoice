@@ -1,5 +1,13 @@
 import type { Job } from 'bullmq';
-import { prisma, INVOICE_SUBMISSION_QUEUE, type Prisma, type PrismaClient } from '@naija/shared';
+import {
+  prisma,
+  checkInvoiceQuota,
+  monthStart,
+  type QuotaCheck,
+  INVOICE_SUBMISSION_QUEUE,
+  type Prisma,
+  type PrismaClient,
+} from '@naija/shared';
 import type { InvoiceSubmissionProvider } from '../providers/invoiceSubmission';
 import { getInvoiceSubmissionProvider } from '../providers/invoiceSubmission';
 
@@ -18,10 +26,17 @@ export { INVOICE_SUBMISSION_QUEUE };
  * exponential backoff retries the job. On a later attempt the same Invoice row
  * (and invoice number) is reused and retried.
  */
+export interface ProcessInvoiceResult {
+  invoiceId: string;
+  status: string;
+  /** Present when the free-tier monthly quota blocked the submission. */
+  quota?: QuotaCheck;
+}
+
 export async function processInvoiceSubmission(
   job: Job<{ transactionId: string }>,
-  deps: { provider?: InvoiceSubmissionProvider; prisma?: PrismaClient } = {},
-): Promise<{ invoiceId: string; status: string }> {
+  deps: { provider?: InvoiceSubmissionProvider; prisma?: PrismaClient; now?: Date } = {},
+): Promise<ProcessInvoiceResult> {
   const db = deps.prisma ?? prisma;
   const provider = deps.provider ?? getInvoiceSubmissionProvider();
 
@@ -38,6 +53,32 @@ export async function processInvoiceSubmission(
   });
   if (existing && (existing.status === 'validated' || existing.status === 'submitted')) {
     return { invoiceId: existing.id, status: existing.status };
+  }
+
+  // Free-tier monthly cap — enforced here at the single pipeline choke point so
+  // WhatsApp and POS sales are both covered. A blocked invoice is NOT retried
+  // by BullMQ: it is a permanent condition until the merchant upgrades or the
+  // month rolls over.
+  const now = deps.now ?? new Date();
+  const usedThisMonth = await db.invoice.count({
+    where: { transaction: { merchantId: transaction.merchantId }, createdAt: { gte: monthStart(now) } },
+  });
+  const quota = checkInvoiceQuota(transaction.merchant.subscriptionTier, usedThisMonth);
+  if (!quota.allowed) {
+    const invoice = await db.invoice.upsert({
+      where: { transactionId: transaction.id },
+      create: {
+        transactionId: transaction.id,
+        invoiceNumber: generateInvoiceNumber(transaction.id),
+        status: 'blocked_by_quota',
+        submissionError: `free tier limit (${quota.limit}) reached for the month`,
+      },
+      update: {
+        status: 'blocked_by_quota',
+        submissionError: `free tier limit (${quota.limit}) reached for the month`,
+      },
+    });
+    return { invoiceId: invoice.id, status: 'blocked_by_quota', quota };
   }
 
   const invoice = await db.invoice.upsert({

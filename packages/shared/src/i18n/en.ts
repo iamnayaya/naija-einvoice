@@ -20,4 +20,8 @@ export const en: MessageCatalog = {
   cancelled: 'Okay, cancelled. Send the item and amount whenever you\u2019re ready.',
   receipt_text: 'Receipt\n{item}\nAmount: \u20A6{amount}\nIRN: {irn}\nVerify: {url}',
   error: 'Something went wrong. Please try again.',
+  free_limit_reached:
+    'You have used all {limit} free invoices for this month. Reply UPGRADE to keep invoicing without limits.',
+  upgrade_link: 'Great choice! Tap here to upgrade: {url}',
+  upgrade_unavailable: 'Upgrade is not available right now \u2014 please contact support.',
 };

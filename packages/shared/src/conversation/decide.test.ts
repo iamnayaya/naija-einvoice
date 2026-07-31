@@ -174,3 +174,22 @@ describe('decideTurn — processing / completed', () => {
     expect(d.replyKey).toBe('confirm_sale');
   });
 });
+
+describe('decideTurn — upgrade intent (Phase 2 billing)', () => {
+  it('asks for the upgrade link in ANY state without losing the conversation', () => {
+    for (const state of ['awaiting_details', 'awaiting_confirmation', 'processing'] as const) {
+      const d = decideTurn(turn(state, emptyContext(), parsed('intent_upgrade')));
+      expect(d.action).toBe('upgrade');
+      expect(d.nextState).toBe(state);
+    }
+  });
+
+  it('keeps an in-progress confirmation intact when the merchant asks to upgrade', () => {
+    const context: ConversationContext = {
+      pendingSales: [{ itemDescription: 'shoe', amount: '5000.00', quantity: 1 }],
+    };
+    const d = decideTurn(turn('awaiting_confirmation', context, parsed('intent_upgrade')));
+    expect(d.action).toBe('upgrade');
+    expect(d.nextContext.pendingSales).toEqual(context.pendingSales);
+  });
+});

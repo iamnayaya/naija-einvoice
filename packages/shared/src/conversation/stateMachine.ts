@@ -41,6 +41,12 @@ export interface ConversationDeps {
   sender: WhatsAppSender;
   /** Called with the created transaction ids once a sale is confirmed. */
   enqueue: (opts: { transactionIds: string[]; threadId: string }) => Promise<void>;
+  /**
+   * Resolves a Paystack payment link when the merchant asks to upgrade. Return
+   * null when upgrades are unavailable (no secret / plan code configured) — the
+   * bot then replies with `upgrade_unavailable`.
+   */
+  createUpgradeLink?: (input: { merchantId: string; language: PreferredLanguage }) => Promise<string | null>;
   /** Optional Tier 2 LLM fallback for the parser. */
   llm?: Tier2Llm;
   logTransition?: TransitionLogger;
@@ -80,7 +86,7 @@ export async function handleIncomingMessage(
 
   const context = (existing.context ?? emptyContext()) as ConversationContext;
   const parsed = await parseMessage(message.text, { llm: deps.llm });
-  const decision = decideTurn({
+  let decision = decideTurn({
     state: existing.state,
     context,
     parsed,
@@ -89,6 +95,23 @@ export async function handleIncomingMessage(
 
   const createdTransactionIds: string[] = [];
   try {
+    if (decision.action === 'upgrade') {
+      // Resolve the payment link up front so the reply is correct, then fall
+      // through to the normal persist/reply path below.
+      let upgradeUrl: string | null = null;
+      if (deps.createUpgradeLink) {
+        upgradeUrl = await deps
+          .createUpgradeLink({ merchantId: message.merchantId, language: message.preferredLanguage })
+          .catch((err: Error) => {
+            console.error(`[conversation:upgrade-link] ${err.message}`);
+            return null;
+          });
+      }
+      if (upgradeUrl) {
+        decision = { ...decision, replyKey: 'upgrade_link', replyParams: { url: upgradeUrl } };
+      }
+    }
+
     if (decision.action === 'enqueue' && decision.salesToEnqueue && decision.salesToEnqueue.length > 0) {
       // One Transaction per confirmed sale. The enqueue call happens after all
       // rows exist so a partial failure never leaves an orphaned job.

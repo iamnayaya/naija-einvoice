@@ -20,4 +20,8 @@ export const ig: MessageCatalog = {
   cancelled: 'Ọ dị mma, akagbuola m ya. Ziga ihe na ego mgbe ọ bụla ị dịla njikere.',
   receipt_text: 'Nchekwa\n{item}\nEgo: \u20A6{amount}\nIRN: {irn}\nNyochaa: {url}',
   error: 'Ihe mere. Biko gbalịa ọzọ.',
+  free_limit_reached:
+    'I meela {limit} akwụkwọ n\'efu niile n\'ọnwa a. Zaa UPGRADE ka ị gaa n\'ihu na-ede akwụkwọ na-enweghị oke.',
+  upgrade_link: 'Nhọrọ dị mma! Pịa ebe a iji bulite: {url}',
+  upgrade_unavailable: 'Ịkwalite adịghị ugbu a \u2014 biko kpọtụrụ nkwado.',
 };

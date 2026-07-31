@@ -30,6 +30,13 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === 'true'),
+  // Paystack plan code (PLN_...) backing the starter tier. Needed to build the
+  // upgrade payment link; unset => the WhatsApp "upgrade" reply says upgrades
+  // are unavailable.
+  PAYSTACK_STARTER_PLAN_CODE: z.string().optional(),
+  // Paystack requires an email at transaction/initialize; merchants onboarded
+  // via WhatsApp have none, so fall back to this address.
+  PAYSTACK_DEFAULT_EMAIL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

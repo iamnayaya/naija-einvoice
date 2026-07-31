@@ -58,3 +58,11 @@ export type { PosWebhookAdapter, NormalizedPosSale } from './pos/types';
 export { PosWebhookError, isRecord, minorToNaira, nairaToNaira } from './pos/types';
 export { verifyPosWebhookSignature, verifyPaystackSignature } from './pos/verification';
 export type { PosVerificationHeaders } from './pos/verification';
+
+export {
+  FREE_TIER_MONTHLY_INVOICE_LIMIT,
+  monthlyLimitForTier,
+  monthStart,
+  checkInvoiceQuota,
+} from './billing/tiers';
+export type { QuotaCheck } from './billing/tiers';

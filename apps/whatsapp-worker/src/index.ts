@@ -2,7 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import { INVOICE_SUBMISSION_QUEUE, type InvoiceSubmissionJobData } from '@naija/shared';
 import { redisConnection } from './queue/connection';
 import { processInvoiceSubmission } from './jobs/invoiceSubmission';
-import { notifyConversationReceipt } from './jobs/conversationReceipt';
+import { notifyConversationReceipt, notifyQuotaReached } from './jobs/conversationReceipt';
 
 const worker = new Worker(
   INVOICE_SUBMISSION_QUEUE,
@@ -22,6 +22,13 @@ worker.on('completed', async (job: Job<InvoiceSubmissionJobData>, result) => {
   if (job.data.threadId && result.status === 'validated') {
     await notifyConversationReceipt(result.invoiceId, job.data.threadId).catch((err: Error) => {
       console.error(`[conversation:receipt] failed: ${err.message}`);
+    });
+  }
+  // Free-tier cap: tell the WhatsApp merchant how to resume invoicing. POS
+  // sales (no thread id) surface this in the merchant dashboard instead.
+  if (job.data.threadId && result.status === 'blocked_by_quota' && result.quota) {
+    await notifyQuotaReached(result.invoiceId, job.data.threadId, result.quota).catch((err: Error) => {
+      console.error(`[conversation:quota] failed: ${err.message}`);
     });
   }
 });

@@ -16,7 +16,7 @@ import type { AmountSpan, MissingField, SaleFields } from './types';
  */
 
 export interface Tier1Result {
-  status: 'parsed' | 'clarify' | 'correction' | 'affirmation' | 'negation' | 'unparseable';
+  status: 'parsed' | 'clarify' | 'correction' | 'affirmation' | 'negation' | 'intent_upgrade' | 'unparseable';
   language: PreferredLanguage;
   fields: SaleFields;
   sales?: SaleFields[];
@@ -27,6 +27,10 @@ export interface Tier1Result {
 
 const CORRECTION_SIGNAL = /(^|\s)(wait|correction|rectify|oops|change it|correct this)(\s|$|!)/i;
 const MEAN_AND_NOT = /\bi mean\b/i;
+// Billing intent: the merchant is asking to move to a paid plan. Detected only
+// when the message contains NO amount (otherwise it is a sale, e.g. "sold an
+// upgrade phone 5k").
+const UPGRADE_INTENT = /\b(upgrade|upgrade plan|buy plan|subscribe|premium|starter plan|growth plan|paid plan)\b/i;
 
 export function tier1Parse(raw: string): Tier1Result {
   // Normalize accents up front so amount/item extraction and verb stripping
@@ -47,6 +51,20 @@ export function tier1Parse(raw: string): Tier1Result {
   }
 
   const amounts = extractAmounts(trimmed);
+
+  // Upgrade requests are short imperatives ("upgrade", "I want to upgrade").
+  // A longer sentence that happens to contain the word ("upgrade the system
+  // tomorrow") is left to the normal sale/clarify path.
+  if (amounts.length === 0 && trimmed.length <= 24 && UPGRADE_INTENT.test(trimmed)) {
+    return {
+      status: 'intent_upgrade',
+      language,
+      fields: {},
+      missingFields: [],
+      confidence: 0.95,
+    };
+  }
+
   const isCorrection = detectCorrection(trimmed);
 
   if (isCorrection && amounts.length > 0) {

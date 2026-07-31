@@ -196,4 +196,54 @@ describe('conversational invoice flow (integration)', () => {
     expect(transaction!.amount.toFixed(2)).toBe('6000.00');
     expect(transaction!.customerRef).toBe('Amina');
   });
+
+  itIf('upgrade intent replies with the payment link without touching pending sales', async () => {
+    const flow = await newFlow('en');
+
+    const first = await say(flow, 'sold shoe 5k');
+    expect(first.state).toBe('awaiting_confirmation');
+
+    const upgrade = await handleIncomingMessage(
+      {
+        prisma: testPrisma,
+        sender: flow.sender,
+        enqueue: async () => undefined,
+        createUpgradeLink: async () => 'https://paystack.com/pay/naija-starter',
+        logTransition: () => undefined,
+      },
+      {
+        merchantId: flow.merchantId,
+        whatsappThreadId: flow.threadId,
+        text: 'upgrade',
+        preferredLanguage: flow.language,
+      },
+    );
+
+    expect(upgrade.state).toBe('awaiting_confirmation'); // pending sale kept
+    expect(upgrade.reply).toContain('https://paystack.com/pay/naija-starter');
+    expect(upgrade.createdTransactionIds).toHaveLength(0);
+    expect(flow.enqueued).toHaveLength(0);
+  });
+
+  itIf('upgrade intent without a link resolver replies upgrade_unavailable', async () => {
+    const flow = await newFlow('en');
+
+    const upgrade = await handleIncomingMessage(
+      {
+        prisma: testPrisma,
+        sender: flow.sender,
+        enqueue: async () => undefined,
+        logTransition: () => undefined,
+      },
+      {
+        merchantId: flow.merchantId,
+        whatsappThreadId: flow.threadId,
+        text: 'upgrade',
+        preferredLanguage: flow.language,
+      },
+    );
+
+    expect(upgrade.reply).toContain('not available');
+    expect(upgrade.createdTransactionIds).toHaveLength(0);
+  });
 });

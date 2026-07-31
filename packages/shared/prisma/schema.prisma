@@ -55,6 +55,17 @@ enum InvoiceStatus {
   submitted
   validated
   failed
+  // Free tier's monthly invoice quota is exhausted. Not retried by the queue —
+  // the merchant must upgrade (or the month rolls over) to resume invoicing.
+  blocked_by_quota
+}
+
+enum SubscriptionStatus {
+  // Paystack subscription created; first payment not yet captured.
+  incomplete
+  active
+  // Cancelled / disabled on Paystack (subscription.disable webhook).
+  disabled
 }
 
 enum ConversationPhase {
@@ -77,6 +88,7 @@ model Merchant {
   transactions       Transaction[]
   conversationStates ConversationState[]
   posTerminals       PosTerminal[]
+  subscription       Subscription?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -125,6 +137,32 @@ model PosTerminal {
 
   @@unique([provider, terminalRef])
   @@index([merchantId])
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  merchantId          String             @unique
+  merchant            Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  // The tier this subscription is paying for. Source of truth for the merchant
+  // being billed; merchant.subscriptionTier mirrors the ACTIVE subscription's
+  // tier and is what quota enforcement reads.
+  tier                SubscriptionTier   @default(starter)
+  status              SubscriptionStatus @default(incomplete)
+
+  // Paystack identifiers (sandbox-tested in Phase 2; refined once credentials exist).
+  paystackSubscriptionCode String?       @unique // SUB_...
+  paystackCustomerCode     String?               // CUS_...
+  paystackPlanCode         String?               // PLN_...
+
+  // Current billing window.
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  nextPaymentDate    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
 }
 
 model Invoice {

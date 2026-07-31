@@ -21,6 +21,8 @@ function summarize(result: ParseResult): string {
       return 'affirmative reply';
     case 'negation':
       return 'negative reply';
+    case 'intent_upgrade':
+      return 'upgrade intent';
     case 'unparseable':
       return 'unparseable';
   }
