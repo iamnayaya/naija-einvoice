@@ -14,6 +14,8 @@ const envSchema = z.object({
     .default('postgresql://naija:naija@localhost:5432/naija_einvoice?schema=public'),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
   WHATSAPP_VERIFY_TOKEN: z.string().default('change-me-local-verify-token'),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  TIER2_MODEL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

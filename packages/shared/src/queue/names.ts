@@ -8,4 +8,10 @@ export const INVOICE_SUBMISSION_JOB = 'submit';
  */
 export interface InvoiceSubmissionJobData {
   transactionId: string;
+  /**
+   * WhatsApp thread id (merchant WA id) of the conversation that produced
+   * this transaction. Set when the job came from the conversational engine;
+   * lets the worker send the receipt and mark the ConversationState completed.
+   */
+  threadId?: string;
 }

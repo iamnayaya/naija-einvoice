@@ -51,6 +51,13 @@ enum InvoiceStatus {
   failed
 }
 
+enum ConversationPhase {
+  awaiting_details
+  awaiting_confirmation
+  processing
+  completed
+}
+
 model Merchant {
   id                 String            @id @default(cuid())
   businessName       String
@@ -62,6 +69,7 @@ model Merchant {
   onboardedByAgentId String?
   onboardedByAgent   Agent?            @relation(fields: [onboardedByAgentId], references: [id], onDelete: SetNull)
   transactions       Transaction[]
+  conversationStates ConversationState[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -112,4 +120,19 @@ model Invoice {
 
   @@index([status, createdAt]) // status reporting / dashboarding
   @@index([status, updatedAt]) // retry-scanning (failed invoices ready to re-run)
+}
+
+model ConversationState {
+  id               String            @id @default(cuid())
+  merchantId       String
+  merchant         Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  whatsappThreadId String            @unique
+  state            ConversationPhase @default(awaiting_details)
+  // Phase 1: pending sales awaiting confirmation, the field being clarified,
+  // etc. See packages/shared/src/conversation/types.ts (ConversationContext).
+  context          Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([merchantId, updatedAt])
 }

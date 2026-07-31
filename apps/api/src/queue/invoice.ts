@@ -18,10 +18,13 @@ export const invoiceQueue = new Queue(INVOICE_SUBMISSION_QUEUE, {
   connection: createRedisConnection(env.REDIS_URL),
 });
 
-export async function enqueueInvoiceSubmission(transactionId: string): Promise<void> {
+export async function enqueueInvoiceSubmission(
+  transactionId: string,
+  opts?: { threadId?: string },
+): Promise<void> {
   await invoiceQueue.add(
     INVOICE_SUBMISSION_JOB,
-    { transactionId },
+    { transactionId, threadId: opts?.threadId },
     {
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000 },
