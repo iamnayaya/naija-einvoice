@@ -7,6 +7,9 @@ export type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
 export const TRANSACTION_SOURCES = ['whatsapp', 'pos'] as const;
 export type TransactionSource = (typeof TRANSACTION_SOURCES)[number];
 
+export const POS_PROVIDERS = ['paystack', 'moniepoint', 'opay'] as const;
+export type PosProvider = (typeof POS_PROVIDERS)[number];
+
 export const INVOICE_STATUSES = ['draft', 'pending_submission', 'submitted', 'validated', 'failed'] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 

@@ -52,3 +52,9 @@ export { buildReceipt, verificationUrlFor, RECEIPT_VERIFY_BASE_URL } from './con
 export type { Receipt, ReceiptInput } from './conversation/receipt';
 export { emptyContext } from './conversation/types';
 export type { PendingSale, ConversationContext } from './conversation/types';
+
+export { POS_ADAPTERS, isKnownPosProvider } from './pos';
+export type { PosWebhookAdapter, NormalizedPosSale } from './pos/types';
+export { PosWebhookError, isRecord, minorToNaira, nairaToNaira } from './pos/types';
+export { verifyPosWebhookSignature, verifyPaystackSignature } from './pos/verification';
+export type { PosVerificationHeaders } from './pos/verification';

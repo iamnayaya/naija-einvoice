@@ -43,6 +43,12 @@ enum TransactionSource {
   pos
 }
 
+enum PosProvider {
+  paystack
+  moniepoint
+  opay
+}
+
 enum InvoiceStatus {
   draft
   pending_submission
@@ -70,6 +76,7 @@ model Merchant {
   onboardedByAgent   Agent?            @relation(fields: [onboardedByAgentId], references: [id], onDelete: SetNull)
   transactions       Transaction[]
   conversationStates ConversationState[]
+  posTerminals       PosTerminal[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -94,12 +101,30 @@ model Transaction {
   amount      Decimal          @db.Decimal(12, 2)
   customerRef String? // optional buyer reference (phone, name, POS receipt no.)
   source      TransactionSource
+  // For POS-originated sales: the provider's transaction reference
+  // (Paystack `reference`, Moniepoint `transactionReference`, OPay `outOrderNo`).
+  // Unique so a provider webhook retry can never double-create a Transaction.
+  providerReference String?       @unique
   rawPayload  Json? // exact inbound payload from WhatsApp Cloud API / POS
   invoice     Invoice?
   createdAt   DateTime         @default(now())
 
   @@index([merchantId, createdAt])
   @@index([source, createdAt])
+}
+
+model PosTerminal {
+  id          String      @id @default(cuid())
+  provider    PosProvider
+  // Provider's terminal identifier: Paystack virtual-terminal code (VT_...),
+  // Moniepoint terminal serial, OPay device `sn`.
+  terminalRef String
+  merchantId  String
+  merchant    Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@unique([provider, terminalRef])
+  @@index([merchantId])
 }
 
 model Invoice {

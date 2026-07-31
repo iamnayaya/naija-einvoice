@@ -16,6 +16,20 @@ const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().default('change-me-local-verify-token'),
   ANTHROPIC_API_KEY: z.string().optional(),
   TIER2_MODEL: z.string().optional(),
+  // Paystack secret key (test: sk_test_..., live: sk_live_...). Verifies
+  // Paystack webhook signatures (HMAC-SHA512). Unset => verification fails
+  // closed and POS webhooks are rejected. This is the same secret used for
+  // subscriptions in Phase 2.
+  PAYSTACK_SECRET_KEY: z.string().optional(),
+  // Webhook secrets for the (stubbed) Moniepoint / OPay POS integrations.
+  POS_MONIEPOINT_SECRET: z.string().optional(),
+  POS_OPAY_SECRET: z.string().optional(),
+  // When true, Paystack webhooks are also rejected unless they come from one
+  // of Paystack's published webhook IPs (defence in depth).
+  PAYSTACK_REQUIRE_KNOWN_IP: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);
