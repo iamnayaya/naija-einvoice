@@ -153,6 +153,67 @@ describe('Paystack subscription webhooks (integration)', () => {
     expect(downgraded!.subscriptionTier).toBe('free');
   });
 
+  itIf('a renewal charge credits the onboarding agent a revenue share, idempotently', async () => {
+    const agent = await testPrisma.agent.create({
+      data: {
+        name: 'Payout Agent',
+        phone: uniqueMerchantPhone(),
+        momoAccountForPayout: '09000000000',
+        revenueShareRate: 0.05,
+      },
+    });
+    const merchant = await testPrisma.merchant.create({
+      data: {
+        businessName: 'BILLING INTEGRATION TEST',
+        phone: uniqueMerchantPhone(),
+        state: 'Lagos',
+        preferredLanguage: 'en',
+        subscriptionTier: 'free',
+        onboardedByAgentId: agent.id,
+      },
+    });
+    const code = `SUB_${Date.now()}`;
+
+    await ingestSubscriptionWebhook(testPrisma, {
+      ...signed({
+        event: 'subscription.create',
+        data: { subscription_code: code, plan: { plan_code: 'PLN_TEST' }, metadata: { merchantId: merchant.id } },
+      }),
+      secret: SECRET,
+    });
+
+    const charge = signed({
+      event: 'charge.success',
+      data: {
+        reference: `REN_${Date.now()}`,
+        amount: 500000, // NGN 5000.00
+        subscription: { subscription_code: code },
+        plan: { plan_code: 'PLN_TEST' },
+        invoice: { period_start: '2026-08-01T00:00:00.000Z', period_end: '2026-08-31T23:59:59.999Z' },
+        metadata: { merchantId: merchant.id },
+      },
+    });
+
+    const first = await ingestSubscriptionWebhook(testPrisma, { ...charge, secret: SECRET });
+    expect(first.outcome).toBe('upserted');
+
+    // Webhook retry of the same charge must NOT double-credit the agent.
+    const second = await ingestSubscriptionWebhook(testPrisma, { ...charge, secret: SECRET });
+    expect(second.outcome).toBe('upserted');
+
+    const payouts = await testPrisma.agentPayout.findMany({ where: { agentId: agent.id } });
+    expect(payouts).toHaveLength(1);
+    expect(Number(payouts[0]!.amount)).toBe(250.0); // 5% of NGN 5000
+    expect(payouts[0]!.period).toBe('2026-08');
+    expect(payouts[0]!.status).toBe('pending');
+    expect(payouts[0]!.merchantId).toBe(merchant.id);
+
+    await testPrisma.agentPayout.deleteMany({ where: { agentId: agent.id } });
+    await testPrisma.subscription.deleteMany({ where: { merchantId: merchant.id } });
+    await testPrisma.merchant.deleteMany({ where: { id: merchant.id } });
+    await testPrisma.agent.deleteMany({ where: { id: agent.id } });
+  });
+
   itIf('a renewal charge for an unknown subscription is acknowledged as no_merchant', async () => {
     const charged = signed({
       event: 'charge.success',

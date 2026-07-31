@@ -1,6 +1,9 @@
 import {
   prisma,
   verifyPaystackSignature,
+  agentShareForPayment,
+  billingPeriod,
+  minorToNaira,
   type PreferredLanguage,
   type PosVerificationHeaders,
   type SubscriptionTier,
@@ -207,7 +210,55 @@ async function handleSubscriptionChargeSuccess(
     data: { subscriptionTier: record.tier },
   });
 
+  await creditAgentForRenewal(db, record, data, period);
+
   return { outcome: 'upserted', event: 'charge.success' };
+}
+
+/**
+ * When the paying merchant was onboarded by an agent, credit that agent's
+ * revenue share (rate x payment) as a pending AgentPayout. Idempotent: keyed
+ * on the Paystack charge reference, so a webhook retry can never double-credit.
+ */
+async function creditAgentForRenewal(
+  db: typeof prisma,
+  subscription: { id: string; merchantId: string },
+  data: Record<string, unknown> | undefined,
+  period: Record<string, unknown> | undefined,
+): Promise<void> {
+  const reference = str(data?.reference);
+  if (!reference) return;
+
+  const merchant = await db.merchant.findUnique({ where: { id: subscription.merchantId } });
+  if (!merchant?.onboardedByAgentId) return;
+
+  const agent = await db.agent.findUnique({ where: { id: merchant.onboardedByAgentId } });
+  if (!agent) return;
+
+  const amount = data?.amount;
+  if (typeof amount !== 'number' && typeof amount !== 'string') return;
+
+  const naira = minorToNaira(amount);
+  const share = agentShareForPayment(naira, agent.revenueShareRate);
+  const periodDate = parseDate(period?.period_start) ?? new Date();
+
+  await db.agentPayout.upsert({
+    where: { providerReference: reference },
+    create: {
+      agentId: agent.id,
+      merchantId: merchant.id,
+      subscriptionId: subscription.id,
+      providerReference: reference,
+      amount: share,
+      period: billingPeriod(periodDate),
+      status: 'pending',
+    },
+    update: {},
+  });
+
+  console.log(
+    `[paystack:agent-share] ${JSON.stringify({ agentId: agent.id, merchantId: merchant.id, amount: share, reference })}`,
+  );
 }
 
 async function handleSubscriptionDisable(

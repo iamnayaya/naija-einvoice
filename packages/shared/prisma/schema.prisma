@@ -68,6 +68,11 @@ enum SubscriptionStatus {
   disabled
 }
 
+enum PayoutStatus {
+  pending
+  paid
+}
+
 enum ConversationPhase {
   awaiting_details
   awaiting_confirmation
@@ -89,6 +94,7 @@ model Merchant {
   conversationStates ConversationState[]
   posTerminals       PosTerminal[]
   subscription       Subscription?
+  payouts            AgentPayout[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -96,14 +102,37 @@ model Merchant {
 }
 
 model Agent {
-  id                   String     @id @default(cuid())
+  id                   String         @id @default(cuid())
   name                 String
-  phone                String     @unique
+  phone                String         @unique
   momoAccountForPayout String // MoMo (MoMo Agent / MTN MoMo / OPay) account for revenue share
-  revenueShareRate     Decimal    @default(0.05) @db.Decimal(5, 4) // e.g. 0.05 = 5%
+  revenueShareRate     Decimal        @default(0.05) @db.Decimal(5, 4) // e.g. 0.05 = 5%
   merchants            Merchant[]
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  payouts              AgentPayout[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model AgentPayout {
+  id              String   @id @default(cuid())
+  agentId         String
+  agent           Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  merchantId      String
+  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  subscriptionId  String? // the subscription whose payment earned this share
+  // Paystack charge reference for the payment that produced this earning.
+  // Unique => a webhook retry can never double-credit the agent.
+  providerReference String?       @unique
+  // Agent's share for this single payment (naira, 2dp).
+  amount          Decimal  @db.Decimal(12, 2)
+  // 'YYYY-MM' of the billing period the earning belongs to.
+  period          String
+  status          PayoutStatus @default(pending)
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([agentId, status, period])
+  @@index([merchantId])
 }
 
 model Transaction {

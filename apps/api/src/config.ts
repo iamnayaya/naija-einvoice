@@ -37,6 +37,10 @@ const envSchema = z.object({
   // Paystack requires an email at transaction/initialize; merchants onboarded
   // via WhatsApp have none, so fall back to this address.
   PAYSTACK_DEFAULT_EMAIL: z.string().optional(),
+  // Internal admin surface (Phase 2): basic-auth credentials. When either is
+  // unset the /admin routes fail closed with 503.
+  ADMIN_USERNAME: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

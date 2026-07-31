@@ -146,3 +146,25 @@ describe('POST /webhooks/paystack/subscriptions (billing, signature-verified)', 
     expect(res.body.outcome).toBe('ignored');
   });
 });
+
+describe('GET /admin/* (basic-auth protected)', () => {
+  const basic = (user: string, pass: string) =>
+    `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
+
+  it('rejects a request without credentials (401)', async () => {
+    const res = await request(app).get('/admin/payouts/summary');
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects wrong credentials (401)', async () => {
+    const res = await request(app)
+      .get('/admin/payouts/summary')
+      .set('Authorization', basic('admin-test', 'wrong-password'));
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects a malformed Authorization header (401)', async () => {
+    const res = await request(app).get('/admin/payouts').set('Authorization', 'Bearer not-basic');
+    expect(res.status).toBe(401);
+  });
+});

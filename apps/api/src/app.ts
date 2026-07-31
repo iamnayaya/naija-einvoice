@@ -5,6 +5,7 @@ import { merchantsRouter } from './routes/merchants';
 import { webhooksRouter } from './routes/webhooks';
 import { posWebhooksRouter } from './routes/posWebhooks';
 import { subscriptionWebhooksRouter } from './routes/subscriptionWebhooks';
+import { adminRouter } from './routes/admin';
 
 export function createApp() {
   const app = express();
@@ -18,5 +19,6 @@ export function createApp() {
   app.use(webhooksRouter);
   app.use(merchantsRouter);
   app.use(invoicesRouter);
+  app.use(adminRouter);
   return app;
 }
