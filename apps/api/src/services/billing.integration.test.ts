@@ -174,15 +174,18 @@ describe('Paystack subscription webhooks (integration)', () => {
     });
     const code = `SUB_${Date.now()}`;
 
-    await ingestSubscriptionWebhook(testPrisma, {
-      ...signed({
-        event: 'subscription.create',
-        data: { subscription_code: code, plan: { plan_code: 'PLN_TEST' }, metadata: { merchantId: merchant.id } },
-      }),
+    const create = signed({
+      event: 'subscription.create',
+      data: { subscription_code: code, plan: { plan_code: 'PLN_TEST' }, metadata: { merchantId: merchant.id } },
+    });
+    const createResult = await ingestSubscriptionWebhook(testPrisma, {
+      rawBody: create.rawBody,
+      headers: { 'x-paystack-signature': create.signature },
       secret: SECRET,
     });
+    expect(createResult.outcome).toBe('upserted');
 
-    const charge = signed({
+    const chargeBody = {
       event: 'charge.success',
       data: {
         reference: `REN_${Date.now()}`,
@@ -192,13 +195,19 @@ describe('Paystack subscription webhooks (integration)', () => {
         invoice: { period_start: '2026-08-01T00:00:00.000Z', period_end: '2026-08-31T23:59:59.999Z' },
         metadata: { merchantId: merchant.id },
       },
-    });
+    };
+    const charge = signed(chargeBody);
+    const webhook = {
+      rawBody: charge.rawBody,
+      headers: { 'x-paystack-signature': charge.signature },
+      secret: SECRET,
+    };
 
-    const first = await ingestSubscriptionWebhook(testPrisma, { ...charge, secret: SECRET });
+    const first = await ingestSubscriptionWebhook(testPrisma, webhook);
     expect(first.outcome).toBe('upserted');
 
     // Webhook retry of the same charge must NOT double-credit the agent.
-    const second = await ingestSubscriptionWebhook(testPrisma, { ...charge, secret: SECRET });
+    const second = await ingestSubscriptionWebhook(testPrisma, webhook);
     expect(second.outcome).toBe('upserted');
 
     const payouts = await testPrisma.agentPayout.findMany({ where: { agentId: agent.id } });
