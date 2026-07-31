@@ -133,10 +133,10 @@ See `README.md`. Short version:
 
 ```bash
 corepack enable          # if pnpm isn't on PATH
-pnpm install             # also runs prisma generate
+pnpm install
 cp .env.example .env
 docker compose up -d     # Postgres + Redis
-pnpm db:setup            # push schema + seed 5 merchants + 1 agent
+pnpm db:setup            # prisma generate + push schema + seed 5 merchants + 1 agent
 pnpm dev                 # API :3000 + worker
 pnpm simulate:whatsapp   # push a fake WhatsApp message through the pipeline
 pnpm test                # unit + integration (integration needs test DB)

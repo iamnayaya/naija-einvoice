@@ -18,10 +18,10 @@ WhatsApp and POS, distributed through POS agent networks.
 ```bash
 git clone <your-repo> && cd naija-einvoice
 corepack enable              # only if `pnpm` isn't on your PATH
-pnpm install                 # installs all workspaces + generates the Prisma client
+pnpm install                 # installs all workspaces
 cp .env.example .env         # local dev defaults are already correct
 docker compose up -d         # starts Postgres:5432 and Redis:6379
-pnpm db:setup                # pushes the schema + seeds 5 merchants and 1 agent
+pnpm db:setup                # generates the Prisma client + pushes the schema + seeds 5 merchants and 1 agent
 pnpm dev                     # starts API (:3000) + worker (BullMQ consumer)
 ```
 
