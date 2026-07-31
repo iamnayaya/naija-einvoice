@@ -1,0 +1,47 @@
+{
+  "name": "naija-einvoice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Naija E-Invoice — NRS-compliant e-invoicing for Nigerian micro-merchants via WhatsApp/POS (Phase 0 foundation)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @naija/api --filter @naija/worker dev",
+    "dev:api": "pnpm --filter @naija/api dev",
+    "dev:worker": "pnpm --filter @naija/worker dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db:push": "cross-env DATABASE_URL=postgresql://naija:naija@localhost:5432/naija_einvoice_test?schema=public prisma db push --schema packages/shared/prisma/schema.prisma --skip-generate",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "prisma generate --schema packages/shared/prisma/schema.prisma",
+    "db:push": "prisma db push --schema packages/shared/prisma/schema.prisma",
+    "db:seed": "pnpm --filter @naija/shared exec prisma db seed",
+    "db:setup": "pnpm db:generate && pnpm db:push && pnpm db:seed",
+    "simulate:whatsapp": "pnpm --filter @naija/api simulate:whatsapp"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "@types/node": "^22.9.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.14.0",
+    "vitest": "^2.1.5"
+  }
+}
