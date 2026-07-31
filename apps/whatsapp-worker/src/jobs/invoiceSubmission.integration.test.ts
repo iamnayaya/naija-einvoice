@@ -53,11 +53,17 @@ function itIf(description: string, fn: () => Promise<void>) {
   });
 }
 
+let merchantPhoneCounter = 0;
+function uniqueMerchantPhone() {
+  merchantPhoneCounter += 1;
+  return `2349${String(Date.now()).slice(-8)}${merchantPhoneCounter}`;
+}
+
 async function createMerchantAndTransaction() {
   const merchant = await testPrisma.merchant.create({
     data: {
       businessName: 'INTEGRATION TEST',
-      phone: `2349${Date.now()}`.slice(0, 13),
+      phone: uniqueMerchantPhone(),
       state: 'Lagos',
       preferredLanguage: 'en',
     },
