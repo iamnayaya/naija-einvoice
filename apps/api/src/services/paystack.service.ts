@@ -185,8 +185,13 @@ async function handleSubscriptionChargeSuccess(
   if (!record) return { outcome: 'no_merchant' };
 
   const subscriptionData = subscription ?? data;
-  const period = asRecord(subscriptionData?.invoice);
-  const nextPayment = str(subscriptionData?.next_payment_date) ?? str(subscriptionData?.nextPaymentDate);
+  // The billing period rides on the top-level `data.invoice` for renewal
+  // charge.success events; accept either location to be sandbox-agnostic.
+  const period = asRecord(data?.invoice) ?? asRecord(subscriptionData?.invoice);
+  const nextPayment =
+    str(data?.next_payment_date) ??
+    str(subscriptionData?.next_payment_date) ??
+    str(subscriptionData?.nextPaymentDate);
 
   await db.subscription.update({
     where: { id: record.id },

@@ -184,7 +184,7 @@ describe('invoice pipeline (integration)', () => {
         data: { merchantId: merchant.id, amount: '100.00', source: 'whatsapp', rawPayload: { fill: true } },
       });
       await testPrisma.invoice.create({
-        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${i}`, status: 'validated' },
+        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${merchant.id.slice(0, 8)}-${i}`, status: 'validated' },
       });
     }
 
@@ -239,7 +239,7 @@ describe('invoice pipeline (integration)', () => {
         data: { merchantId: merchant.id, amount: '100.00', source: 'whatsapp', rawPayload: { fill: true } },
       });
       await testPrisma.invoice.create({
-        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${i}`, status: 'validated' },
+        data: { transactionId: tx.id, invoiceNumber: `INV-FILL-${merchant.id.slice(0, 8)}-${i}`, status: 'validated' },
       });
     }
 
