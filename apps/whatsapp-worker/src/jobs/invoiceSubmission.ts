@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Job } from 'bullmq';
 import {
   prisma,
@@ -118,11 +119,16 @@ export async function processInvoiceSubmission(
   throw new Error(`[invoice-submission] NRS submission failed: ${result.error}`);
 }
 
-/** Human-readable seller invoice number, stable across retries for a transaction. */
+/**
+ * Human-readable seller invoice number, stable across retries for a
+ * transaction and unique across transactions: the suffix is the first 8 hex
+ * chars of a SHA-256 of the transaction id. (A plain cuid prefix can collide
+ * across processes under parallel load — the invoiceNumber column is @unique.)
+ */
 export function generateInvoiceNumber(transactionId: string): string {
   const year = new Date().getFullYear();
-  const short = transactionId.slice(0, 8).toUpperCase();
-  return `INV-${year}-${short}`;
+  const digest = createHash('sha256').update(transactionId).digest('hex').slice(0, 8).toUpperCase();
+  return `INV-${year}-${digest}`;
 }
 
 function toInvoiceDraft(

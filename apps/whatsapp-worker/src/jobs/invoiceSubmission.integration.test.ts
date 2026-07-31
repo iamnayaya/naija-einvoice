@@ -258,7 +258,12 @@ describe('invoice pipeline (integration)', () => {
     await testPrisma.merchant.deleteMany({ where: { id: merchant.id } });
   });
 
-  it('generateInvoiceNumber is stable and prefixed', () => {
-    expect(generateInvoiceNumber('abc123')).toBe(`INV-${new Date().getFullYear()}-ABC123`);
+  it('generateInvoiceNumber is stable, prefixed and unique per transaction', () => {
+    const a = generateInvoiceNumber('abc123');
+    const b = generateInvoiceNumber('abc123');
+    const c = generateInvoiceNumber('def456');
+    expect(a).toBe(b);
+    expect(a).toMatch(new RegExp(`^INV-${new Date().getFullYear()}-[0-9A-F]{8}$`));
+    expect(c).not.toBe(a);
   });
 });
